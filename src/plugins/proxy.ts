@@ -8,7 +8,9 @@ import Ajv from "ajv"
 const ajv = new Ajv()
 const uuid = hyperid()
 const apiConfigType = Type.Object({
+  /**Version of this spec.  ex. 1.0 */
   version: Type.String(),
+  /** List of all the endpoints for the gateway */
   endpoints: Type.Array(
     Type.Object({
       /** A description of this api endpoint */
@@ -17,6 +19,7 @@ const apiConfigType = Type.Object({
       endpoint: Type.RegEx(/^\/([a-z0-9_\-\/]+[^\/])$/),
       /** If true, this API end point will not be registered.  Defaults to false */
       disabled: Type.Optional(Type.Boolean()),
+      /** List of methods this route applies to */
       methods: Type.Array(
         Type.Union([
           Type.Literal("GET"),
@@ -29,11 +32,15 @@ const apiConfigType = Type.Object({
         ])
       ),
 
+      /** Information about the backend that the API will be proxied to */
       backend: Type.Object({
+        /** Server name that the reqest will be sent to. */
         host: Type.RegEx(
           /((http|https):\/\/)([a-z0-9]+\.)?([a-z0-9][a-z0-9-]*)?((\.[a-z]{2,6})|(\.[a-z]{2,6})(\.[a-z]{2,6}))?(:\d{1,5})$/
         ),
+        /**API end point on the backend server to route to */
         endpoint: Type.RegEx(/^\/([a-z0-9_\-\/]+[^\/])$/),
+        /**List of options for the http connection to the backend server */
         http: Type.Optional(
           Type.Object({
             agentOptions: Type.Object({
@@ -44,6 +51,7 @@ const apiConfigType = Type.Object({
             }),
           })
         ),
+        /** Can be true to enable http2 protocol, or a list of settings for http2 connections */
         http2: Type.Optional(
           Type.Union([
             Type.Boolean(),
@@ -142,6 +150,7 @@ if (!valid) {
  */
 export default fp<any>(async fastify => {
   for (let value of apilist.endpoints) {
+    // Skip disabled routes
     if (value.disabled === true) {
       continue
     }
@@ -167,61 +176,3 @@ export default fp<any>(async fastify => {
     fastify.register(proxy, proxyConfig)
   }
 })
-
-// export default fp<any>(async fastify => {
-//   console.log("I'm here in proxy")
-//   const proxyConfig = {
-//     upstream: "http://localhost:3030",
-//     prefix: "/api/v1/cars", // optional
-//     rewritePrefix: "/cars", // options
-//     http2: false, // optional
-//     replyOptions: {
-//       rewriteRequestHeaders: (originalReq: any, headers: any) => {
-//         // console.log(originalReq)
-//         const newHeaders = { ...headers, "request-id": uuid() }
-//         console.log(newHeaders)
-//         return newHeaders
-//       },
-//     },
-//     preHandler: (request: any, reply: any, done: any) => {
-//       //console.log({ request, reply })
-//       done()
-//     },
-//     // httpMethods: ["DELETE", "GET", "HEAD", "PATCH", "POST", "PUT", "OPTIONS"], // optional
-//     httpMethods: ["GET", "HEAD", "OPTIONS"], // optional
-//     //httpMethods: ["GET", "HEAD"], // optional
-//   }
-//   fastify.register(proxy, proxyConfig)
-
-//   const proxyConfig2 = {
-//     upstream: "http://localhost:3030",
-//     prefix: "/api/v1/cars", // optional
-//     rewritePrefix: "/trucks", // options
-//     http2: false, // optional
-//     replyOptions: {
-//       rewriteRequestHeaders: (originalReq: any, headers: any) => ({
-//         ...headers,
-//         "request-id": uuid(),
-//       }),
-//     },
-//     // httpMethods: ["DELETE", "GET", "HEAD", "PATCH", "POST", "PUT", "OPTIONS"], // optional
-//     httpMethods: ["PATCH", "POST", "PUT"], // optional
-//   }
-//   fastify.register(proxy, proxyConfig2)
-
-//   const proxyConfig3 = {
-//     upstream: "http://localhost:3030",
-//     prefix: "/api/v1/cars", // optional
-//     rewritePrefix: "/cars", // options
-//     http2: false, // optional
-//     replyOptions: {
-//       rewriteRequestHeaders: (originalReq: any, headers: any) => ({
-//         ...headers,
-//         "request-id": uuid(),
-//       }),
-//     },
-//     // httpMethods: ["DELETE", "GET", "HEAD", "PATCH", "POST", "PUT", "OPTIONS"], // optional
-//     httpMethods: ["DELETE"], // optional
-//   }
-//   fastify.register(proxy, proxyConfig3)
-// })

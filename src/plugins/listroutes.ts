@@ -1,5 +1,10 @@
 import fp from "fastify-plugin"
 
+// module.exports = fp(fastifyListRoute, {
+//   name: "fastify-list-routes",
+//   fastify: "4.x",
+// });
+
 /**
  * This plugins prints out all the registered routes
  *
@@ -14,16 +19,6 @@ export default fp<any>(async fastify => {
 
   fastify.addHook("onReady", done => {
     routeOptions.sort((a, b) => {
-      // let c1 = a.url.localeCompare(b.url)
-      // if (!c1) {
-      //   const aMethod: string =
-      //     typeof a.method === "object" ? a.method.join(", ") : a.method
-      //   const bMethod: string =
-      //     typeof b.method === "object" ? b.method.join(", ") : b.method
-      //   console.log(aMethod, bMethod)
-      //   return aMethod.localeCompare(bMethod)
-      // }
-      // return c1
       return a.url.localeCompare(b.url)
     })
 
