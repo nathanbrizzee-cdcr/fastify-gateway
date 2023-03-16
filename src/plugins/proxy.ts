@@ -28,6 +28,7 @@ const apiConfigType = Type.Object({
           Type.Literal("HEAD"),
         ])
       ),
+
       backend: Type.Object({
         host: Type.RegEx(
           /((http|https):\/\/)([a-z0-9]+\.)?([a-z0-9][a-z0-9-]*)?((\.[a-z]{2,6})|(\.[a-z]{2,6})(\.[a-z]{2,6}))?(:\d{1,5})$/
@@ -73,7 +74,16 @@ const apilist: apiConfigSchema = {
     {
       description: "V1 of the Cars API find and get",
       endpoint: "/api/v1/cars",
-      methods: ["GET", "HEAD", "OPTIONS"],
+      methods: ["GET"],
+      backend: {
+        host: "http://localhost:3030",
+        endpoint: "/cars",
+      },
+    },
+    {
+      description: "V1 of the Cars API find and get",
+      endpoint: "/api/v1/cars",
+      methods: ["HEAD"],
       backend: {
         host: "http://localhost:3030",
         endpoint: "/cars",
@@ -82,12 +92,30 @@ const apilist: apiConfigSchema = {
     {
       description: "V1 of the Cars API updates",
       endpoint: "/api/v1/cars",
-      methods: ["PATCH", "POST", "PUT"],
+      methods: ["POST"],
       backend: {
         host: "http://localhost:3030",
         endpoint: "/trucks",
       },
     },
+    {
+      description: "V1 of the Cars API updates",
+      endpoint: "/api/v1/cars",
+      methods: ["PATCH", "PUT"],
+      backend: {
+        host: "http://localhost:3030",
+        endpoint: "/trucks",
+      },
+    },
+    // {
+    //   description: "V1 of the Cars API updates",
+    //   endpoint: "/api/v1/cars",
+    //   methods: ["PUT"],
+    //   backend: {
+    //     host: "http://localhost:3030",
+    //     endpoint: "/trucks",
+    //   },
+    // },
     {
       description: "V1 of the Cars API deletes",
       endpoint: "/api/v1/cars",
@@ -118,7 +146,6 @@ export default fp<any>(async fastify => {
       continue
     }
 
-    console.log("I'm here in proxy")
     // @ts-ignore
     const proxyConfig = {
       upstream: value.backend.host,
@@ -133,7 +160,6 @@ export default fp<any>(async fastify => {
         },
       },
       preHandler: (request: any, reply: any, done: any) => {
-        //console.log({ request, reply })
         done()
       },
       httpMethods: value.methods,

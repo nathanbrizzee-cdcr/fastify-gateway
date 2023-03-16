@@ -31,7 +31,7 @@ export default fp<any>(async fastify => {
       },
     },
   }
-  console.log("I'm here in helmet")
+  // console.log("I'm here in helmet")
   // console.log("I'm here in helmet", JSON.stringify(helmetOptions, null, 2))
   fastify.register(helmet, helmetOptions)
 })

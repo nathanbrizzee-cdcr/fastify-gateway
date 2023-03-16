@@ -9,10 +9,13 @@
   "scripts": {
     "test": "npm run build:ts && tsc -p test/tsconfig.json && tap --ts \"test/**/*.test.ts\"",
     "start": "npm run build:ts && fastify start -l info dist/app.js",
+    "clean": "shx rm -rf ./dist",
     "lint": "eslint --ignore-path .gitignore --ext .js,.ts .",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
-    "build:ts": "tsc",
+    "build:ts": "npm run clean && tsc",
     "watch:ts": "tsc -w",
+    "standalone": "npm run clean && npm run build:ts && nodemon dist/server.js | pino-pretty --colorize",
+    "standalone:start": "npm run build:ts && node dist/server.js",
     "dev": "npm run build:ts && concurrently -k -p \"[{name}]\" -n \"TypeScript,App\" -c \"yellow.bold,cyan.bold\" \"npm:watch:ts\" \"npm:dev:start\"",
     "dev:start": "fastify start --ignore-watch=.ts$ -w -l info -P dist/app.js"
   },
@@ -38,7 +41,9 @@
     "concurrently": "^7.0.0",
     "eslint": "^8.36.0",
     "fastify-tsconfig": "^1.0.1",
+    "nodemon": "^2.0.21",
     "prettier": "^2.8.4",
+    "shx": "^0.3.4",
     "tap": "^16.1.0",
     "ts-node": "^10.4.0",
     "typescript": "^4.5.4"
