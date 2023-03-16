@@ -56,13 +56,17 @@ const apiConfigType = Type.Object({
           Type.Union([
             Type.Boolean(),
             Type.Object({
-              sessionTimeout: Type.Optional(Type.Number()), // HTTP/2 session timeout in msecs, defaults to 60000 (1 minute)
-              requestTimeout: Type.Optional(Type.Number()), // HTTP/2 session timeout in msecs, defaults to 60000 (1 minute)
+              /**HTTP/2 session timeout in msecs, defaults to 60000 (1 minute) */
+              sessionTimeout: Type.Optional(Type.Number()),
+              /** HTTP/2 request timeout in msecs, defaults to 10000 (10 seconds) */
+              requestTimeout: Type.Optional(Type.Number()),
+              /** HTTP/2 session connect options, pass in any options from https://nodejs.org/api/http2.html#http2_http2_connect_authority_options_listener */
               sessionOptions: Type.Optional(
                 Type.Object({
                   rejectUnauthorized: Type.Boolean(),
                 })
               ),
+              /** // HTTP/2 request options, pass in any options from https://nodejs.org/api/http2.html#clienthttp2sessionrequestheaders-options */
               requestOptions: Type.Optional(
                 Type.Object({
                   endStream: Type.Boolean(),
@@ -148,7 +152,29 @@ if (!valid) {
  *
  * @see https://github.com/fastify/fastify-cors
  */
-export default fp<any>(async fastify => {
+export default fp(async (fastify, opts: any) => {
+  /**The onResponse hook is executed when a response has been sent, so you will not be able to send more data to the client */
+  fastify.addHook("onResponse", async (request, reply) => {
+    const milliseconds = reply.getResponseTime()
+    fastify.log.info({
+      onResponse: milliseconds,
+      msg: "after reply sent to client",
+    })
+  })
+
+  /**
+   * onSend is fired just before the response is sent to the front end.
+   * The onResponse hook is executed when a response has been sent, so you will not be able to send more data to the client
+   */
+  fastify.addHook("onSend", async (request, reply) => {
+    const milliseconds = reply.getResponseTime()
+    fastify.log.info({
+      onSend: milliseconds,
+      msg: "before reply sent to client",
+    })
+    reply.header("X-Response-Time", String(milliseconds))
+  })
+
   for (let value of apilist.endpoints) {
     // Skip disabled routes
     if (value.disabled === true) {
@@ -163,8 +189,9 @@ export default fp<any>(async fastify => {
       http2: value.backend.http2,
       replyOptions: {
         rewriteRequestHeaders: (originalReq: any, headers: any) => {
+          // Add a custom header for tracking the request across servers
           const newHeaders = { ...headers, "request-id": uuid() }
-          console.log(newHeaders)
+          // console.log(newHeaders)
           return newHeaders
         },
       },
