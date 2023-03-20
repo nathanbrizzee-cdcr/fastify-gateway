@@ -26,10 +26,9 @@ export default fp<any>(async fastify => {
     for (const routeOption of routeOptions) {
       const { method, url } = routeOption
       // if (method === "HEAD") continue
-      fastify.log.info({
-        url,
-        methods: typeof method === "string" ? [method] : method,
-      })
+      fastify.log.info(
+        `${typeof method === "string" ? [method] : method} => ${url}`
+      )
     }
     done()
   })
