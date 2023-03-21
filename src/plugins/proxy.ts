@@ -5,12 +5,14 @@ import fastifyCircuitBreaker from "@fastify/circuit-breaker"
 import * as hyperid from "hyperid"
 import { Type, Static } from "@sinclair/typebox"
 import Ajv from "ajv"
+import addFormats from "ajv-formats"
 
 const ajv = new Ajv()
+addFormats(ajv)
 const uuid = hyperid()
 const apiConfigType = Type.Object({
-  /**Version of this spec.  ex. 1.0 */
-  version: Type.String(),
+  /**Version of this spec.  ex. 1 */
+  version: Type.Number({ minimum: 1 }),
   /** List of all the endpoints for the gateway */
   endpoints: Type.Array(
     Type.Object({
@@ -66,52 +68,19 @@ const apiConfigType = Type.Object({
         ),
         /**API end point on the backend server to route to */
         endpoint: Type.RegEx(/^\/([a-z0-9_\-\/]+[^\/])$/),
-        /**List of options for the http connection to the backend server */
-        http: Type.Optional(
-          Type.Object({
-            // agentOptions: Type.Optional(
-            //   Type.Object({
-            //     keepAliveMsecs: Type.Optional(Type.Number()), //  10 * 60 * 1000
-            //   })
-            // ),
-            requestOptions: Type.Optional(
-              Type.Object({
-                timeout: Type.Optional(Type.Number()), // timeout in msecs, defaults to 10000 (10 seconds)
-              })
-            ),
-          })
-        ),
-        // /** Can be true to enable http2 protocol, or a list of settings for http2 connections */
-        // http2: Type.Optional(
-        //   Type.Union([
-        //     Type.Boolean(),
-        //     Type.Object({
-        //       /**HTTP/2 session timeout in msecs, defaults to 60000 (1 minute) */
-        //       sessionTimeout: Type.Optional(Type.Number()),
-        //       /** HTTP/2 request timeout in msecs, defaults to 10000 (10 seconds) */
-        //       requestTimeout: Type.Optional(Type.Number()),
-        //       /** HTTP/2 session connect options, pass in any options from https://nodejs.org/api/http2.html#http2_http2_connect_authority_options_listener */
-        //       sessionOptions: Type.Optional(
-        //         Type.Object({
-        //           rejectUnauthorized: Type.Boolean(),
-        //         })
-        //       ),
-        //       /** HTTP/2 request options, pass in any options from https://nodejs.org/api/http2.html#clienthttp2sessionrequestheaders-options */
-        //       requestOptions: Type.Optional(
-        //         Type.Object({
-        //           endStream: Type.Boolean(),
-        //         })
-        //       ),
-        //     }),
-        //   ])
-        // ),
+        /**
+         * Server timout in msecs.
+         * @default 10000
+         */
+        timeout: Type.Optional(Type.Number({ minimum: 100 })),
       }),
     })
   ),
 })
 export type apiConfigSchema = Static<typeof apiConfigType>
+
 const apilist: apiConfigSchema = {
-  version: "1.0",
+  version: 1,
   endpoints: [
     {
       description: "V1 of the Cars API find and get",
@@ -126,11 +95,7 @@ const apilist: apiConfigSchema = {
       backend: {
         host: "http://localhost:3030",
         endpoint: "/cars",
-        http: {
-          requestOptions: {
-            timeout: 4000,
-          },
-        },
+        timeout: 4000,
       },
     },
     {
@@ -182,7 +147,7 @@ if (!valid) {
 /**
  * This plugins proxies rquests
  *
- * @see https://github.com/fastify/fastify-cors
+ * @see https://github.com/fastify/fastify-http-proxy
  */
 export default fp(async (fastify, opts: any) => {
   /** Register the circuit breaker library */
@@ -236,19 +201,17 @@ export default fp(async (fastify, opts: any) => {
     /** Configure a default timeout for http calls - that can be overridden */
     const httpRequestTimeout = {
       requestOptions: {
-        timeout: 10000,
+        timeout: route.backend.timeout || 10000,
       },
     }
+
     // @ts-ignore
     const proxyConfig = {
       upstream: route.backend.host,
       prefix: route.endpoint,
       rewritePrefix: route.backend.endpoint,
       http2: false,
-      http: route.backend.http
-        ? Object.assign(httpRequestTimeout, route.backend.http)
-        : httpRequestTimeout,
-      //http2: route.backend.http2,
+      http: httpRequestTimeout,
       replyOptions: {
         rewriteRequestHeaders: (originalReq: any, headers: any) => {
           // Add a custom header for tracking the request across servers
